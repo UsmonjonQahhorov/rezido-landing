@@ -1,0 +1,150 @@
+@import "tailwindcss";
+
+/*
+ * Design tokens.
+ *
+ * Mirrored from rezido-mobile/src/constants/theme.ts, which is the source of truth for the
+ * Rezido brand: cream paper, one clay accent that carries every call to action, deep
+ * espresso text and a forest green as the quiet secondary. Corners stay tight and the
+ * design leans on paper, hairlines and type rather than on shadows.
+ *
+ * The default Tailwind palette is cleared so that no component can reach for a colour the
+ * brand does not define. Components use the semantic names below, never hex values.
+ */
+@theme {
+  --color-*: initial;
+  --color-white: #ffffff;
+
+  /* Surfaces — cream, paper, sand, espresso */
+  --color-background: #fbf4e7;
+  --color-surface: #fffcf5;
+  --color-surface-muted: #f3eada;
+  --color-surface-inverse: #2a2118;
+
+  /* Hairlines — sand300, sand400 */
+  --color-line: #e7dcc7;
+  --color-line-strong: #d4c5aa;
+
+  /* Text — espresso, umber, taupe. `ink-faint` is for placeholders and ornament only:
+     it does not reach text contrast on cream. */
+  --color-ink: #2a2118;
+  --color-ink-muted: #6f6355;
+  --color-ink-faint: #a2988a;
+  --color-ink-inverse: #fbf4e7;
+
+  /* The one accent — clay. `primary` is the brand value and is used for large type,
+     marks and map ink. Filled buttons and small text use `primary-strong` (the app's
+     pressed clay), because white on #E1552F stays below WCAG AA for body-size labels. */
+  --color-primary: #e1552f;
+  --color-primary-strong: #c44421;
+  --color-primary-deep: #a83a1c;
+  --color-primary-muted: #fae3da;
+  /* Clay lifted just enough to stay legible as small text on espresso (5.4:1). */
+  --color-primary-on-dark: #ee7350;
+
+  /* Secondary accent — forest. Rent, positive states. */
+  --color-secondary: #3e6b4b;
+  --color-secondary-muted: #e5ede5;
+
+  --color-danger: #a33124;
+  --color-danger-muted: #f7e5e1;
+
+  /* Schematic map — derived warm neutrals; the map is a backdrop, prices are the product. */
+  --color-map-land: #f6eddd;
+  --color-map-block: #efe4d0;
+  --color-map-road: #fffcf5;
+  --color-map-park: #dde7d9;
+  --color-map-water: #d3e0da;
+
+  /* Architectural rather than bubbly: corners stay tight (4 / 8 / 12 / 16). */
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-xl: 16px;
+
+  /* Soft, low elevation — the same two levels as the app. */
+  --shadow-card: 0 4px 12px rgb(42 33 24 / 0.08);
+  --shadow-floating: 0 6px 14px rgb(42 33 24 / 0.16);
+
+  --ease-soft: cubic-bezier(0.2, 0.7, 0.2, 1);
+}
+
+/* Space Grotesk for headings, Inter for reading, IBM Plex Mono for data — per the
+   Rezido Brand Identity. The variables are set by next/font in the root layout. */
+@theme inline {
+  --font-display: var(--font-space-grotesk), ui-sans-serif, system-ui, sans-serif;
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-plex-mono), ui-monospace, "SFMono-Regular", monospace;
+}
+
+@layer base {
+  html {
+    color-scheme: light;
+    scroll-behavior: smooth;
+    /* Anchored sections land below the sticky header rather than under it. */
+    scroll-padding-top: 5rem;
+    -webkit-text-size-adjust: 100%;
+  }
+
+  body {
+    background-color: var(--color-background);
+    color: var(--color-ink);
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  ::selection {
+    background-color: var(--color-primary-muted);
+    color: var(--color-ink);
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--color-primary-strong);
+    outline-offset: 2px;
+  }
+
+  summary {
+    list-style: none;
+  }
+  summary::-webkit-details-marker {
+    display: none;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    html {
+      scroll-behavior: auto;
+    }
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
+}
+
+/* The page gutter: 16px on phones, widening with the viewport, capped at 1280px. */
+@utility container-page {
+  width: 100%;
+  max-width: 80rem;
+  margin-inline: auto;
+  padding-inline: 1rem;
+  @media (width >= 40rem) {
+    padding-inline: 1.5rem;
+  }
+  @media (width >= 64rem) {
+    padding-inline: 2rem;
+  }
+}
+
+/* Small mono caps for section markers: "02 — XARITA". */
+@utility eyebrow {
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  line-height: 1rem;
+  font-weight: 500;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
