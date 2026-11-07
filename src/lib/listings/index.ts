@@ -5,7 +5,7 @@ import { env } from "@/lib/env";
 
 import { fetchListing, fetchListings } from "./api";
 import { DEFAULT_FILTERS, applyFilters, type ListingFilters } from "./filters";
-import type { Listing, ListingsResult, ListingsSource } from "./types";
+import { pricesComparable, type Listing, type ListingsResult, type ListingsSource } from "./types";
 
 /**
  * The single entry point for listing data on the server.
@@ -45,7 +45,7 @@ export async function getListing(id: string): Promise<Listing | null> {
 export async function getSimilarListings(listing: Listing, limit = 3): Promise<Listing[]> {
   const { results } = await searchListings({ ...DEFAULT_FILTERS, listingType: listing.listingType });
   return results
-    .filter((candidate) => candidate.id !== listing.id)
+    .filter((candidate) => candidate.id !== listing.id && pricesComparable(listing, candidate))
     .sort(
       (a, b) =>
         Math.abs(a.price.amount - listing.price.amount) - Math.abs(b.price.amount - listing.price.amount),

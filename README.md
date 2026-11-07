@@ -10,12 +10,13 @@ and talks to the backend only over its public HTTP API, and only when configured
 ## Quick start
 
 ```bash
-npm install
+npm ci
 cp .env.example .env.local   # optional — every variable has a safe default
 npm run dev                  # http://localhost:3000
 ```
 
 Requires Node.js 20.9 or newer.
+The regression test toolchain uses Node.js 22.22.2, matching the Linux CI baseline.
 
 ## Commands
 
@@ -27,6 +28,7 @@ Requires Node.js 20.9 or newer.
 | `npm run lint`      | ESLint, warnings treated as errors                         |
 | `npm run typecheck` | Generates route types, then `tsc --noEmit`                 |
 | `npm run check`     | typecheck + lint + build — run before shipping             |
+| `npm test`          | Vitest + Testing Library adapter, price and security regression tests |
 
 ## Environment variables
 
@@ -125,6 +127,17 @@ Remote listing photos are loaded with `unoptimized` (the backend already serves
 normalised sizes and the media host is not known at build time). To route them through
 the Next optimiser, add the media host to `images.remotePatterns` in `next.config.ts` and
 drop `unoptimized` for those images in `PropertyImage`.
+
+Rental periods are explicit: `night` → `/kechasiga`, `month` → `/oyiga` on cards,
+detail pages, metadata, map markers/popups and the preview. Missing, null, empty,
+unknown and invalid-type periods remain distinct in the model and show an unspecified
+period label; none defaults to monthly. Demo rental examples explicitly state monthly.
+`id` remains the property UUID; `listingId` carries the separate offer UUID.
+
+Live list results include aggregate `diagnostics` counters (processed/accepted/skipped,
+fixed rejection reasons and period states), without user text, IDs or payloads. If rows
+are skipped, `count` describes the accepted page rather than claiming an unchanged server
+total. A malformed envelope is an error; an entirely rejected page is an empty result.
 
 Verified against the local backend (`docker compose`, port 8001, seeded data): search,
 district matching, price filters and detail pages all work.

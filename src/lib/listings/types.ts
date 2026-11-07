@@ -49,6 +49,20 @@ export type Currency = (typeof CURRENCIES)[number];
 
 export type Money = { amount: number; currency: Currency };
 
+/** Preserve why a period is unavailable; never silently promote it to month. */
+export type RentPeriod =
+  | { status: "known"; value: "night" | "month" }
+  | { status: "missing" | "null" | "empty" | "unknown" | "invalid_type" };
+
+export type ListingSkipReason = "invalid_record" | "invalid_id" | "invalid_title" | "invalid_listing_type" | "invalid_price";
+export type ListingDiagnostics = {
+  processed: number;
+  accepted: number;
+  skipped: number;
+  reasons: Partial<Record<ListingSkipReason, number>>;
+  rentPeriods: Partial<Record<RentPeriod["status"], number>>;
+};
+
 export type GeoPoint = { latitude: number; longitude: number };
 
 export type ListingImage = {
@@ -64,9 +78,13 @@ export type ListingImage = {
 };
 
 export type Listing = {
+  /** Property UUID, used by /properties/{id}/ and the detail URL. */
   id: string;
+  /** Marketplace offer UUID; never substitute the property id for a booking. */
+  listingId: string | null;
   title: string;
   listingType: ListingType;
+  rentPeriod: RentPeriod;
   propertyType: PropertyType;
   price: Money;
   rooms: number | null;
@@ -96,9 +114,11 @@ export type ListingsSource = "api" | "demo";
 
 export type ListingsResult = {
   source: ListingsSource;
-  /** Total matches on the server; may exceed `results.length` when paginated. */
+  /** Server total when the page is valid; accepted page count if rows were rejected. */
   count: number;
   results: Listing[];
+  /** Aggregate counters only; no payloads, IDs, URLs or user text. Live API pages only. */
+  diagnostics?: ListingDiagnostics;
 };
 
 export function isListingType(value: unknown): value is ListingType {
@@ -107,4 +127,10 @@ export function isListingType(value: unknown): value is ListingType {
 
 export function isPropertyType(value: unknown): value is PropertyType {
   return typeof value === "string" && (PROPERTY_TYPES as readonly string[]).includes(value);
+}
+
+/** Nearest-price suggestions must compare the same currency and rental unit. */
+export function pricesComparable(a: Listing, b: Listing): boolean {
+  if (a.listingType !== b.listingType || a.price.currency !== b.price.currency) return false;
+  return a.listingType === "sale" || (a.rentPeriod.status === "known" && b.rentPeriod.status === "known" && a.rentPeriod.value === b.rentPeriod.value);
 }

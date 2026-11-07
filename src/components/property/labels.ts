@@ -1,5 +1,5 @@
 import { interpolate, type Dictionary } from "@/i18n";
-import { formatArea } from "@/lib/format";
+import { formatArea, formatPrice } from "@/lib/format";
 import { districtLabel } from "@/lib/listings/filters";
 import type { Listing } from "@/lib/listings/types";
 
@@ -12,11 +12,26 @@ export type PropertyLabels = Pick<
   "forSale" | "forRent" | "verified" | "rooms" | "area" | "floorOf" | "floor" | "floorsTotal" | "locationUnknown" | "imageMissing" | "open"
 > & {
   perMonth: string;
+  perNight: string;
+  rentPeriodUnknown: string;
   demoBadge: string;
 };
 
 export function propertyLabels(dict: Dictionary): PropertyLabels {
-  return { ...dict.property, perMonth: dict.common.perMonth, demoBadge: dict.common.demoBadge };
+  return { ...dict.property, perMonth: dict.common.perMonth, perNight: dict.common.perNight,
+    rentPeriodUnknown: dict.common.rentPeriodUnknown, demoBadge: dict.common.demoBadge };
+}
+
+export function rentPeriodLabel(listing: Listing, labels: PropertyLabels): string | null {
+  if (listing.listingType !== "rent") return null;
+  if (listing.rentPeriod.status !== "known") return labels.rentPeriodUnknown;
+  return listing.rentPeriod.value === "night" ? labels.perNight : labels.perMonth;
+}
+
+/** Shared by metadata, marker accessibility text and full price displays. */
+export function listingPriceText(listing: Listing, labels: PropertyLabels): string {
+  const period = rentPeriodLabel(listing, labels);
+  return `${formatPrice(listing.price)}${period ? ` ${period}` : ""}`;
 }
 
 export function listingLocation(listing: Listing, labels: PropertyLabels): string {

@@ -26,6 +26,8 @@ export const uz = {
     details: "Batafsil",
     som: "so‘m",
     perMonth: "/oyiga",
+    perNight: "/kechasiga",
+    rentPeriodUnknown: "ijara davri ko‘rsatilmagan",
   },
 
   nav: {

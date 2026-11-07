@@ -49,7 +49,12 @@ export function ListingsSection({ initial }: { initial: ListingsResult | null })
                 />
                 <div className="mt-8 min-h-5" />
                 <div className="mt-5">
-                  {initial ? (
+                  {initial && initial.results.length === 0 ? (
+                    <div className="rounded-xl border border-dashed border-line-strong px-6 py-14 text-center">
+                      <h3 className="font-display text-xl font-medium">{labels.emptyTitle}</h3>
+                      <p className="mt-2 text-ink-muted">{labels.emptyBody}</p>
+                    </div>
+                  ) : initial ? (
                     <ListingsGrid listings={initial.results} labels={cardLabels} />
                   ) : (
                     <ListingsGridSkeleton />

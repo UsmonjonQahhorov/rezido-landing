@@ -2,7 +2,7 @@ import { Heart, House, Map as MapIcon, MapPin, Search, User } from "lucide-react
 import Image from "next/image";
 
 import { Wordmark } from "@/components/layout/Wordmark";
-import { listingLocation, type PropertyLabels } from "@/components/property/labels";
+import { listingLocation, rentPeriodLabel, type PropertyLabels } from "@/components/property/labels";
 import type { Dictionary } from "@/i18n";
 import { cx } from "@/lib/cx";
 import { formatPrice } from "@/lib/format";
@@ -94,8 +94,8 @@ export function PhonePreview({
             <div className="space-y-0.5 p-2.5">
               <p className="font-mono text-[12px] font-semibold text-ink">
                 {formatPrice(listing.price)}
-                {listing.listingType === "rent" ? (
-                  <span className="font-sans text-[9px] font-normal text-ink-muted"> {propertyLabels.perMonth}</span>
+                  {rentPeriodLabel(listing, propertyLabels) ? (
+                    <span className="font-sans text-[9px] font-normal text-ink-muted"> {rentPeriodLabel(listing, propertyLabels)}</span>
                 ) : null}
               </p>
               <p className="truncate font-display text-[11px] font-medium text-ink">{listing.title}</p>
