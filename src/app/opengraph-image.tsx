@@ -66,7 +66,7 @@ export default async function OpenGraphImage() {
             </div>
           </div>
         </div>
-        {/* eslint-disable-next-line @next/next/no-img-element -- ImageResponse renders this embedded image into a PNG. */}
+        {/* A plain <img>, not next/image: ImageResponse renders this embedded image into a PNG. */}
         <img
           src={`data:image/jpeg;base64,${photo.toString("base64")}`}
           alt=""
