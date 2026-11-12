@@ -17,8 +17,9 @@ export async function GET(request: NextRequest) {
     return Response.json(result, {
       headers: { "Cache-Control": "public, max-age=0, s-maxage=60, stale-while-revalidate=300" },
     });
-  } catch (error) {
-    console.error("[api/listings] Listing search failed", error);
+  } catch {
+    // Error causes can contain upstream URLs or response snippets. Log only a fixed code.
+    console.error("[api/listings] Listing search failed");
     return Response.json({ error: "listings_unavailable" }, { status: 502 });
   }
 }

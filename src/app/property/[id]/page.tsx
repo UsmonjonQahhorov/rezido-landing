@@ -5,7 +5,7 @@ import { notFound } from "next/navigation";
 import { cache } from "react";
 
 import { ListingsGrid } from "@/components/property/ListingsGrid";
-import { listingLocation, propertyLabels } from "@/components/property/labels";
+import { listingLocation, listingPriceText, propertyLabels, rentPeriodLabel } from "@/components/property/labels";
 import { PropertyImage } from "@/components/property/PropertyImage";
 import { getDictionary, interpolate } from "@/i18n";
 import { cx } from "@/lib/cx";
@@ -37,7 +37,8 @@ export async function generateMetadata({ params }: PageProps<"/property/[id]">):
   const { id } = await params;
   const listing = await loadListing(id);
   if (!listing) return { title: getDictionary().propertyPage.notFoundTitle };
-  const description = `${formatPrice(listing.price)} · ${listingLocation(listing, propertyLabels(getDictionary()))}`;
+  const labels = propertyLabels(getDictionary());
+  const description = `${listingPriceText(listing, labels)} · ${listingLocation(listing, labels)}`;
   return {
     title: listing.title,
     description,
@@ -180,8 +181,8 @@ export default async function PropertyPage({ params }: PageProps<"/property/[id]
           </p>
           <p className="mt-6 font-mono text-3xl font-semibold tracking-[-0.02em] text-ink sm:text-[2.1rem]">
             {formatPrice(listing.price)}
-            {listing.listingType === "rent" ? (
-              <span className="ml-1.5 font-sans text-base font-normal text-ink-muted">{labels.perMonth}</span>
+            {rentPeriodLabel(listing, labels) ? (
+              <span className="ml-1.5 font-sans text-base font-normal text-ink-muted">{rentPeriodLabel(listing, labels)}</span>
             ) : null}
           </p>
 

@@ -14,7 +14,7 @@ import type { Listing } from "@/lib/listings/types";
  * depict these (fictional) homes — their alt text describes the photograph itself.
  */
 
-type DemoListingInput = Omit<Listing, "images" | "isDemo" | "isVerified" | "ownerName"> & {
+type DemoListingInput = Omit<Listing, "images" | "isDemo" | "isVerified" | "ownerName" | "listingId"> & {
   photos: PhotoId[];
 };
 
@@ -23,6 +23,7 @@ const DEMO_LISTING_INPUTS: DemoListingInput[] = [
     id: "namuna-yunusobod-3-xonali",
     title: "3 xonali kvartira, Yunusobod 19-mavze",
     listingType: "sale",
+    rentPeriod: { status: "null" },
     propertyType: "apartment",
     price: { amount: 1_050_000_000, currency: "UZS" },
     rooms: 3,
@@ -46,6 +47,7 @@ const DEMO_LISTING_INPUTS: DemoListingInput[] = [
     id: "namuna-chilonzor-2-xonali-ijara",
     title: "2 xonali kvartira, Chilonzor 12-kvartal",
     listingType: "rent",
+    rentPeriod: { status: "known", value: "month" },
     propertyType: "apartment",
     price: { amount: 5_500_000, currency: "UZS" },
     rooms: 2,
@@ -69,6 +71,7 @@ const DEMO_LISTING_INPUTS: DemoListingInput[] = [
     id: "namuna-anhor-4-xonali",
     title: "4 xonali kvartira, Anhor bo‘yi",
     listingType: "sale",
+    rentPeriod: { status: "null" },
     propertyType: "apartment",
     price: { amount: 2_400_000_000, currency: "UZS" },
     rooms: 4,
@@ -92,6 +95,7 @@ const DEMO_LISTING_INPUTS: DemoListingInput[] = [
     id: "namuna-mirobod-hovli",
     title: "5 xonali hovli uy, Mirobod tumani",
     listingType: "sale",
+    rentPeriod: { status: "null" },
     propertyType: "house",
     price: { amount: 3_200_000_000, currency: "UZS" },
     rooms: 5,
@@ -115,6 +119,7 @@ const DEMO_LISTING_INPUTS: DemoListingInput[] = [
     id: "namuna-mirzo-ulugbek-1-xonali-ijara",
     title: "1 xonali kvartira, Mirzo Ulug‘bek",
     listingType: "rent",
+    rentPeriod: { status: "known", value: "month" },
     propertyType: "apartment",
     price: { amount: 4_200_000, currency: "UZS" },
     rooms: 1,
@@ -138,6 +143,7 @@ const DEMO_LISTING_INPUTS: DemoListingInput[] = [
     id: "namuna-sergeli-2-xonali",
     title: "2 xonali kvartira, Sergeli yangi uylar",
     listingType: "sale",
+    rentPeriod: { status: "null" },
     propertyType: "apartment",
     price: { amount: 690_000_000, currency: "UZS" },
     rooms: 2,
@@ -161,6 +167,7 @@ const DEMO_LISTING_INPUTS: DemoListingInput[] = [
     id: "namuna-yakkasaroy-3-xonali-ijara",
     title: "3 xonali kvartira, Yakkasaroy",
     listingType: "rent",
+    rentPeriod: { status: "known", value: "month" },
     propertyType: "apartment",
     price: { amount: 9_800_000, currency: "UZS" },
     rooms: 3,
@@ -184,6 +191,7 @@ const DEMO_LISTING_INPUTS: DemoListingInput[] = [
     id: "namuna-uchtepa-1-xonali",
     title: "1 xonali kvartira, Uchtepa",
     listingType: "sale",
+    rentPeriod: { status: "null" },
     propertyType: "apartment",
     price: { amount: 480_000_000, currency: "UZS" },
     rooms: 1,
@@ -207,6 +215,7 @@ const DEMO_LISTING_INPUTS: DemoListingInput[] = [
 
 export const DEMO_LISTINGS: Listing[] = DEMO_LISTING_INPUTS.map(({ photos, ...listing }) => ({
   ...listing,
+  listingId: null,
   images: photos.map(toListingImage),
   isVerified: false,
   ownerName: null,

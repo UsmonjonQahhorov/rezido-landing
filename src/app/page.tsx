@@ -15,10 +15,10 @@ export const revalidate = 300;
 async function loadInitialListings(): Promise<ListingsResult | null> {
   try {
     return await searchListings();
-  } catch (error) {
+  } catch {
     // The page still renders; the explorer retries from the browser and shows an error
     // state with a retry action if the API stays unavailable.
-    console.error("[home] Could not load listings", error);
+    console.error("[home] Could not load listings");
     return null;
   }
 }

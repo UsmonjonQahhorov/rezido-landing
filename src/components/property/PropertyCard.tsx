@@ -7,7 +7,7 @@ import { formatPrice } from "@/lib/format";
 import type { Listing } from "@/lib/listings/types";
 import { ROUTES } from "@/lib/site";
 
-import { listingFacts, listingLocation, type PropertyLabels } from "./labels";
+import { listingFacts, listingLocation, rentPeriodLabel, type PropertyLabels } from "./labels";
 import { PropertyImage } from "./PropertyImage";
 
 type PropertyCardProps = {
@@ -81,8 +81,8 @@ export function PropertyCard({
       <div className="flex flex-1 flex-col p-4">
         <p className="font-mono text-[17px] font-semibold tracking-[-0.01em] text-ink">
           {formatPrice(listing.price)}
-          {listing.listingType === "rent" ? (
-            <span className="ml-1 font-sans text-sm font-normal text-ink-muted">{labels.perMonth}</span>
+          {rentPeriodLabel(listing, labels) ? (
+            <span className="ml-1 font-sans text-sm font-normal text-ink-muted">{rentPeriodLabel(listing, labels)}</span>
           ) : null}
         </p>
         <Heading className="mt-1.5 font-display text-[17px] font-medium leading-snug text-ink">

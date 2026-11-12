@@ -4,7 +4,7 @@ import { ArrowRight, X } from "lucide-react";
 import Link from "next/link";
 import { useId, useMemo, useRef, useState } from "react";
 
-import { listingFacts, listingLocation, type PropertyLabels } from "@/components/property/labels";
+import { listingFacts, listingLocation, listingPriceText, rentPeriodLabel, type PropertyLabels } from "@/components/property/labels";
 import { PropertyImage } from "@/components/property/PropertyImage";
 import { SegmentedControl } from "@/components/ui/form-controls";
 import { interpolate, type Dictionary } from "@/i18n";
@@ -33,8 +33,10 @@ type MapExplorerProps = {
 };
 
 /** Marker text: the amount alone for UZS (the legend names the currency). */
-function markerPrice(listing: Listing): string {
-  return listing.price.currency === "UZS" ? formatAmountCompact(listing.price.amount) : formatPriceCompact(listing.price);
+function markerPrice(listing: Listing, labels: PropertyLabels): string {
+  const amount = listing.price.currency === "UZS" ? formatAmountCompact(listing.price.amount) : formatPriceCompact(listing.price);
+  const period = rentPeriodLabel(listing, labels);
+  return `${amount}${period ? ` ${period}` : ""}`;
 }
 
 /**
@@ -115,7 +117,7 @@ export function MapExplorer({ listings, source, labels, propertyLabels, variant 
                     aria-label={interpolate(labels.pinLabel, {
                       district: districtLabel(listing.location.district) ?? listingLocation(listing, propertyLabels),
                       title: listing.title,
-                      price: formatPrice(listing.price),
+                      price: listingPriceText(listing, propertyLabels),
                     })}
                     onClick={() => select(key)}
                     className={cx(
@@ -137,7 +139,7 @@ export function MapExplorer({ listings, source, labels, propertyLabels, variant 
                       )}
                     />
                     <span aria-hidden="true" className="hidden whitespace-nowrap sm:inline">
-                      {markerPrice(listing)}
+                      {markerPrice(listing, propertyLabels)}
                     </span>
                   </button>
                 </li>
@@ -198,8 +200,8 @@ export function MapExplorer({ listings, source, labels, propertyLabels, variant 
                   <span className="min-w-0">
                     <span className="block font-mono text-sm font-semibold text-ink">
                       {formatPrice(listing.price)}
-                      {listing.listingType === "rent" ? (
-                        <span className="font-sans font-normal text-ink-muted"> {propertyLabels.perMonth}</span>
+                      {rentPeriodLabel(listing, propertyLabels) ? (
+                        <span className="font-sans font-normal text-ink-muted"> {rentPeriodLabel(listing, propertyLabels)}</span>
                       ) : null}
                     </span>
                     <span className="mt-0.5 block truncate text-sm text-ink">{listing.title}</span>
@@ -242,8 +244,8 @@ function MapPreviewCard({
       <div className="min-w-0 flex-1 py-3 pl-3.5 pr-10">
         <p className="font-mono text-sm font-semibold text-ink sm:text-[15px]">
           {formatPrice(listing.price)}
-          {listing.listingType === "rent" ? (
-            <span className="font-sans text-xs font-normal text-ink-muted"> {propertyLabels.perMonth}</span>
+          {rentPeriodLabel(listing, propertyLabels) ? (
+            <span className="font-sans text-xs font-normal text-ink-muted"> {rentPeriodLabel(listing, propertyLabels)}</span>
           ) : null}
         </p>
         <p className="mt-0.5 truncate font-display text-[15px] font-medium text-ink">{listing.title}</p>

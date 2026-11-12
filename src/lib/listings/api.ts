@@ -11,6 +11,9 @@ import {
   type FurnishingState,
   type Listing,
   type ListingImage,
+  type ListingDiagnostics,
+  type ListingSkipReason,
+  type RentPeriod,
   type RenovationType,
 } from "./types";
 
@@ -76,15 +79,17 @@ async function getJson(url: string): Promise<{ status: number; body: unknown }> 
       next: { revalidate: REVALIDATE_SECONDS },
       signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
     });
-  } catch (error) {
-    throw new ListingsUnavailableError("Rezido API request failed", { cause: error });
+  } catch {
+    // A fetch cause may embed URLs/credentials. Keep the public error safe to log.
+    throw new ListingsUnavailableError("Rezido API request failed");
   }
   if (response.status === 404) return { status: 404, body: null };
   if (!response.ok) throw new ListingsUnavailableError(`Rezido API responded ${response.status}`);
   try {
     return { status: response.status, body: await response.json() };
-  } catch (error) {
-    throw new ListingsUnavailableError("Rezido API returned invalid JSON", { cause: error });
+  } catch {
+    // JSON parser errors can quote response bodies; never retain that cause.
+    throw new ListingsUnavailableError("Rezido API returned invalid JSON");
   }
 }
 
@@ -92,21 +97,40 @@ export async function fetchListings(
   apiUrl: string,
   filters: ListingFilters,
   pageSize: number,
-): Promise<{ count: number; results: Listing[] }> {
+): Promise<{ count: number; results: Listing[]; diagnostics: ListingDiagnostics }> {
   const { body } = await getJson(`${apiUrl}/properties/?${toSearchParams(filters, pageSize)}`);
   const page = asRecord(body);
   if (!page || !Array.isArray(page.results)) {
     throw new ListingsUnavailableError("Rezido API returned an unexpected page shape");
   }
-  const results = page.results.map(toListing).filter((listing): listing is Listing => listing !== null);
-  return { count: asNumber(page.count) ?? results.length, results };
+  const results: Listing[] = [];
+  const diagnostics: ListingDiagnostics = { processed: page.results.length, accepted: 0, skipped: 0, reasons: {}, rentPeriods: {} };
+  for (const row of page.results) {
+    const parsed = toListing(row, apiUrl);
+    if ("reason" in parsed) {
+      diagnostics.skipped += 1;
+      diagnostics.reasons[parsed.reason] = (diagnostics.reasons[parsed.reason] ?? 0) + 1;
+    } else {
+      results.push(parsed.listing);
+      const status = parsed.listing.rentPeriod.status;
+      diagnostics.rentPeriods[status] = (diagnostics.rentPeriods[status] ?? 0) + 1;
+    }
+  }
+  diagnostics.accepted = results.length;
+  const reportedCount = asNumber(page.count);
+  const count = diagnostics.skipped === 0 && reportedCount !== null && Number.isSafeInteger(reportedCount) && reportedCount >= results.length
+    ? reportedCount : results.length;
+  return { count, results, diagnostics };
 }
 
 export async function fetchListing(apiUrl: string, id: string): Promise<Listing | null> {
   // The detail route only matches UUIDs; anything else is a guaranteed 404.
   if (!UUID_PATTERN.test(id)) return null;
   const { status, body } = await getJson(`${apiUrl}/properties/${id}/`);
-  return status === 404 ? null : toListing(body);
+  if (status === 404) return null;
+  const parsed = toListing(body, apiUrl);
+  if ("reason" in parsed) throw new ListingsUnavailableError("Rezido API returned an invalid listing");
+  return parsed.listing;
 }
 
 // ---------------------------------------------------------------------------------------
@@ -127,6 +151,7 @@ function asString(value: unknown): string | null {
 
 /** DRF serialises decimals as strings; accept both. */
 function asNumber(value: unknown): number | null {
+  if (typeof value === "string" && !/^-?\d+(?:\.\d+)?$/.test(value)) return null;
   const number = typeof value === "string" ? Number(value) : value;
   return typeof number === "number" && Number.isFinite(number) ? number : null;
 }
@@ -135,10 +160,22 @@ function asEnum<T extends string>(values: readonly T[], value: unknown): T | nul
   return typeof value === "string" && (values as readonly string[]).includes(value) ? (value as T) : null;
 }
 
-function toImage(value: unknown, preferThumbnail: boolean): ListingImage | null {
+function imageUrl(value: unknown, apiUrl: string): string | null {
+  const text = asString(value);
+  if (!text || text !== text.trim() || /[\s\\]/.test(text) || text.startsWith("//")) return null;
+  try {
+    // Local storage may return /media/...; resolve on the API origin, not the landing.
+    const url = text.startsWith("/") ? new URL(text, apiUrl) : new URL(text);
+    return (url.protocol === "https:" || url.protocol === "http:") && !url.username && !url.password ? url.href : null;
+  } catch {
+    return null;
+  }
+}
+
+function toImage(value: unknown, preferThumbnail: boolean, apiUrl: string): ListingImage | null {
   const media = asRecord(value);
   if (!media) return null;
-  const src = (preferThumbnail && asString(media.thumbnail_url)) || asString(media.url);
+  const src = (preferThumbnail && imageUrl(media.thumbnail_url, apiUrl)) || imageUrl(media.url, apiUrl);
   if (!src) return null;
   return {
     src,
@@ -149,7 +186,7 @@ function toImage(value: unknown, preferThumbnail: boolean): ListingImage | null 
   };
 }
 
-function toImages(record: JsonRecord): ListingImage[] {
+function toImages(record: JsonRecord, apiUrl: string): ListingImage[] {
   if (Array.isArray(record.media) && record.media.length > 0) {
     const ordered = [...record.media]
       .map(asRecord)
@@ -159,22 +196,38 @@ function toImages(record: JsonRecord): ListingImage[] {
           Number(b.is_primary === true) - Number(a.is_primary === true) ||
           (asNumber(a.sort_order) ?? 0) - (asNumber(b.sort_order) ?? 0),
       );
-    return ordered.map((media) => toImage(media, false)).filter((image): image is ListingImage => image !== null);
+    return ordered.map((media) => toImage(media, false, apiUrl)).filter((image): image is ListingImage => image !== null);
   }
-  const primary = toImage(record.primary_image, true);
+  const primary = toImage(record.primary_image, true, apiUrl);
   return primary ? [primary] : [];
 }
 
-function toListing(value: unknown): Listing | null {
+function rentPeriod(record: JsonRecord): RentPeriod {
+  if (!Object.hasOwn(record, "rent_period")) return { status: "missing" };
+  const value = record.rent_period;
+  if (value === null) return { status: "null" };
+  if (typeof value !== "string") return { status: "invalid_type" };
+  if (value === "") return { status: "empty" };
+  if (value === "night" || value === "month") return { status: "known", value };
+  return { status: "unknown" };
+}
+
+function toListing(value: unknown, apiUrl: string): { listing: Listing } | { reason: ListingSkipReason } {
   const record = asRecord(value);
-  if (!record) return null;
+  if (!record) return { reason: "invalid_record" };
 
   const id = asString(record.id);
   const title = asString(record.title);
   const listingType = record.listing_type;
   const price = asRecord(record.price);
   const amount = asNumber(price?.amount);
-  if (!id || !title || !isListingType(listingType) || amount === null) return null;
+  const currency = asEnum<Currency>(CURRENCIES, price?.currency);
+  if (!id || !UUID_PATTERN.test(id)) return { reason: "invalid_id" };
+  if (!title) return { reason: "invalid_title" };
+  if (!isListingType(listingType)) return { reason: "invalid_listing_type" };
+  const rawAmount = price?.amount;
+  const validDecimal = (typeof rawAmount === "string" || typeof rawAmount === "number") && /^\d+(?:\.\d{1,2})?$/.test(String(rawAmount));
+  if (amount === null || amount < 0 || !validDecimal || !Number.isSafeInteger(Math.round(amount * 100)) || !currency) return { reason: "invalid_price" };
 
   const location = asRecord(record.location);
   const point = asRecord(location?.point);
@@ -182,12 +235,15 @@ function toListing(value: unknown): Listing | null {
   const longitude = asNumber(point?.longitude);
   const owner = asRecord(record.owner);
 
-  return {
+  const listingId = asString(record.listing_id);
+  return { listing: {
     id,
+    listingId: listingId && UUID_PATTERN.test(listingId) ? listingId : null,
     title,
     listingType,
+    rentPeriod: rentPeriod(record),
     propertyType: isPropertyType(record.property_type) ? record.property_type : "other",
-    price: { amount, currency: asEnum<Currency>(CURRENCIES, price?.currency) ?? "UZS" },
+    price: { amount, currency },
     rooms: asNumber(record.rooms),
     areaTotal: asNumber(record.area_total),
     floor: asNumber(record.floor),
@@ -198,7 +254,7 @@ function toListing(value: unknown): Listing | null {
       region: asString(location?.region),
       point: latitude !== null && longitude !== null ? { latitude, longitude } : null,
     },
-    images: toImages(record),
+    images: toImages(record, apiUrl),
     description: asString(record.description) ?? "",
     renovation: asEnum<RenovationType>(RENOVATION_TYPES, record.renovation),
     furnishing: asEnum<FurnishingState>(FURNISHING_STATES, record.furnishing),
@@ -206,5 +262,5 @@ function toListing(value: unknown): Listing | null {
     publishedAt: asString(record.published_at),
     ownerName: asString(owner?.first_name),
     isDemo: false,
-  };
+  } };
 }

@@ -10,10 +10,10 @@ import { uz } from "@/i18n/dictionaries/uz";
  * Route-level error boundary. Error boundaries must be Client Components, so the strings
  * come straight from the dictionary module. The error itself is logged, never shown.
  */
-export default function RouteError({ error, retry }: { error: Error & { digest?: string }; retry: () => void }) {
+export default function RouteError({ retry }: { error: Error & { digest?: string }; retry: () => void }) {
   useEffect(() => {
-    console.error(error);
-  }, [error]);
+    console.error("[route] Rendering failed");
+  }, []);
 
   return (
     <div className="container-page py-24">

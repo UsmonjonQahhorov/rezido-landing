@@ -5,8 +5,8 @@ import type { Currency, Money } from "@/lib/listings/types";
  * site and the app print the same number the same way.
  *
  * Price is the most scanned element on every surface, so it is formatted for scanning, not
- * accounting: `1 050 000 000 so‘m`, never `1050000000.00 UZS`. Fractional units are always
- * dropped. A space groups thousands, as Uzbek and Russian both write them.
+ * accounting: `1 050 000 000 so‘m`, never `1050000000.00 UZS`. Significant fractional
+ * units are retained (up to the backend's two decimal places). A space groups thousands.
  */
 
 const PREFIX_SYMBOL: Partial<Record<Currency, string>> = { USD: "$", EUR: "€" };
@@ -28,8 +28,10 @@ function withCurrency(formatted: string, currency: Currency): string {
 }
 
 export function formatPrice({ amount, currency }: Money): string {
-  if (!Number.isFinite(amount)) return "—";
-  return withCurrency(groupDigits(amount), currency);
+  if (!Number.isFinite(amount) || amount < 0) return "—";
+  const [whole = "0", fraction = ""] = amount.toFixed(2).split(".");
+  const decimals = fraction.replace(/0+$/, "");
+  return withCurrency(`${groupDigits(Number(whole))}${decimals ? `,${decimals}` : ""}`, currency);
 }
 
 /** Up to `digits` decimals, only when they carry information; decimal comma. */
